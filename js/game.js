@@ -53,7 +53,7 @@ monsterImage.src = "images/monster.png"
 // Game objects
 var lives = 3;
 var level = 1;
-var monsterSpeed = 256/2;
+var monsterSpeed = 256/4;
 
 var hero = {
 	speed: 256, // movement in pixels per second
@@ -70,6 +70,9 @@ var nStones = 3;
 
 var nMonsters = 2;
 var monsters = [];
+
+var nMonstersFollow = 0;
+var monstersFollow = [];
 
 // Handle keyboard controls
 var keysDown = {};
@@ -120,12 +123,33 @@ var generateMonsters = function(){
 		monster.size = 32;
 		monster.initX = monster.x;
 		monster.initY = monster.y;
-		monster.maxMov = 100;
+		monster.maxMov = 125;
 		monster.speed = monsterSpeed;
 
 		if(!touching(monster, princess, monster.size, princess.size) &&
 		   !touching(monster, hero, monster.size, hero.size)){
 			monsters.push(monster);
+		}
+		monster = {};
+	}
+}
+
+var generateMonstersFollow = function(){
+	monstersFollow = [];
+	var monster = {};
+
+	for (var i = 0; i < nMonstersFollow; i++){
+		monster.x = 32 + (Math.random() * (canvas.width - 96));
+		monster.y = 32 + (Math.random() * (canvas.height - 96));
+		monster.size = 32;
+		monster.speed = monsterSpeed/2;
+
+		if(!touching(monster, princess, monster.size, princess.size) &&
+		   !touching(monster, hero, monster.size, hero.size)){
+			monstersFollow.push(monster);
+			console.log("añado un monstruo!")
+		}else{
+			console.log("coincide")
 		}
 		monster = {};
 	}
@@ -143,6 +167,7 @@ var reset = function () {
 	princess.y = 32 + (Math.random() * (canvas.height - 96));
 
 	generateStones();
+	generateMonstersFollow();
 	generateMonsters();
 };
 
@@ -170,6 +195,20 @@ var touchingTrees = function(obj){
 var touchingMonsters = function(){
 	for (var i = 0; i < monsters.length; i++){
 		if (touching(hero, monsters[i], hero.size/2, monsters[i].size/2)){
+			lives--;
+			if (lives == 0){
+				lives = 3;
+				level = 1;
+				nStones = 3;
+				nMonsters = 2;
+				princessesCaught = 0;
+				nMonstersFollow = 0;
+			}
+			reset();
+		}
+	}
+	for (i = 0; i < monstersFollow.length; i++){
+		if (touching(hero, monstersFollow[i], hero.size/2, monstersFollow[i].size/2)){
 			lives--;
 			if (lives == 0){
 				lives = 3;
@@ -213,6 +252,34 @@ var movingMonsters = function(modifier){
 	}
 }
 
+var movingFollowMonsters = function(modifier){
+	for (var i = 0; i < monstersFollow.length; i++){
+		if (hero.x - monstersFollow[i].x > 0){
+			monstersFollow[i].x += monstersFollow[i].speed * modifier;
+		}else{
+			monstersFollow[i].x -= monstersFollow[i].speed * modifier;
+		}
+		if (hero.y - monstersFollow[i].y > 0){
+			monstersFollow[i].y += monstersFollow[i].speed * modifier;
+		}else{
+			monstersFollow[i].y -= monstersFollow[i].speed * modifier;
+		}
+	}
+}
+
+var levelUp = function(){
+	level++;
+	lives++;
+	nStones += 3;
+	monsterSpeed += 20;
+	if ((level % 2) == 0){
+		nMonstersFollow++;
+		nMonsters++;
+	}else{
+		nMonsters += 2;
+	}
+}
+
 // Update game objects
 var update = function (modifier) {
 	lastHeroPos.x = hero.x;
@@ -230,6 +297,7 @@ var update = function (modifier) {
 		hero.x += hero.speed * modifier;
 	}
 	movingMonsters(modifier);
+	movingFollowMonsters(modifier);
 	touchingTrees(hero);
 	touchingMonsters();
 	touchingStones();
@@ -237,11 +305,8 @@ var update = function (modifier) {
 	// Princess and hero touching?
 	if (touching(hero, princess, hero.size/2, princess.size/2)) {
 		++princessesCaught;
-		if (princessesCaught % 10 == 0){
-			level++;
-			lives++;
-			nStones += 3;
-			nMonsters += 2;
+		if (princessesCaught % 5 == 0){
+			levelUp();
 		}
 		reset();
 	}
@@ -258,6 +323,9 @@ var drawStones = function(){
 var drawMonsters = function(){
 	for (var i = 0; i < monsters.length; i++){
 		ctx.drawImage(monsterImage, monsters[i].x, monsters[i].y);
+	}
+	for (var i = 0; i < monstersFollow.length; i++){
+		ctx.drawImage(monsterImage, monstersFollow[i].x, monstersFollow[i].y);
 	}
 }
 
@@ -282,6 +350,7 @@ var render = function () {
 	if (monstersReady){
 		drawMonsters();
 	}
+
 
 	// Score
 	ctx.fillStyle = "rgb(250, 250, 250)";
